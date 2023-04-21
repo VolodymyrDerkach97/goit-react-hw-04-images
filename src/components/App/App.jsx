@@ -3,7 +3,7 @@ import { Component } from 'react';
 import Searchbar from '../Searchbar';
 import ImageGallery from '../ImageGallery';
 import Button from '../Button';
-import { ThreeDots } from 'react-loader-spinner';
+import Loader from '../Loader';
 
 import pixabayFetch from '../../services/pixabay-api';
 
@@ -13,16 +13,18 @@ class App extends Component {
     submitValue: '',
     page: 1,
     isLoading: false,
+    error: null,
   };
 
   async componentDidUpdate(prevProps, prevState) {
     const { submitValue, page } = this.state;
     if (submitValue !== prevState.submitValue) {
-      this.setState({ isLoading: true });
+      this.setState({ isLoading: true, page: 1 });
       try {
         const response = await pixabayFetch(submitValue, page);
 
         this.setState({ cards: [...response] });
+        return;
       } catch (error) {
         this.setState({ error: error.message });
       } finally {
@@ -37,6 +39,7 @@ class App extends Component {
         this.setState(prevState => {
           return {
             cards: [...prevState.cards, ...response],
+
             isLoading: 'resolved',
           };
         });
@@ -49,7 +52,7 @@ class App extends Component {
   }
 
   handelSubmit = data => {
-    this.setState({ submitValue: data });
+    this.setState({ submitValue: data, page: 1 });
   };
 
   onLoadMore = () => {
@@ -60,29 +63,35 @@ class App extends Component {
 
   visibleLoadButton = () => {
     const { cards } = this.state;
-    const visible = cards <= 12 ? false : true;
+    const visible = cards.length < 12 ? false : true;
     return visible;
   };
+
+  isCompleteSerch = () => {
+    const { cards } = this.state;
+    return cards.length <= 0 ? true : false;
+  };
+
+  inSearchMessage = submitValue => {
+    if (this.state.submitValue !== '') {
+      return <div>Нажаль ми нічого не знайшли за запитом {submitValue}</div>;
+    }
+    return <div>Заповніть поле пошуку</div>;
+  };
   render() {
-    const { cards, isLoading } = this.state;
+    const { cards, isLoading, submitValue } = this.state;
     const visible = this.visibleLoadButton();
+    const isCompleteSerch = this.isCompleteSerch();
+    const searchMessage = this.inSearchMessage(submitValue);
+
     return (
       <>
         <Searchbar onSubmit={this.handelSubmit} />
         <ImageGallery cards={cards} />
-        {isLoading && (
-          <ThreeDots
-            height="80"
-            width="80"
-            radius="9"
-            color="#3f51b5"
-            ariaLabel="three-dots-loading"
-            wrapperStyle={{}}
-            wrapperClassName=""
-            visible={true}
-          />
-        )}
+
+        {isLoading && <Loader />}
         {visible && <Button onClick={this.onLoadMore} />}
+        {isCompleteSerch && searchMessage}
       </>
     );
   }
