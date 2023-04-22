@@ -1,6 +1,5 @@
 import { Component } from 'react';
-// import pixabayFetch from '../../services/pixabay-api';
-// import PropTypes from 'prop-types';
+import PropTypes from 'prop-types';
 import {
   Header,
   SearchForm,
@@ -58,4 +57,6 @@ class Searchbar extends Component {
 
 export default Searchbar;
 
-Searchbar.propTypes = {};
+Searchbar.propTypes = {
+  onSubmit: PropTypes.func.isRequired,
+};

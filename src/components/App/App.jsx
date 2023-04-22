@@ -1,11 +1,13 @@
 import { Component } from 'react';
-// import { Main } from './App.styled';
+import { AppContainer } from './App.styled';
 import Searchbar from '../Searchbar';
 import ImageGallery from '../ImageGallery';
 import Button from '../Button';
 import Loader from '../Loader';
+import Message from '../Message';
 
 import pixabayFetch from '../../services/pixabay-api';
+import Modal from 'components/Modal/Modal';
 
 class App extends Component {
   state = {
@@ -14,6 +16,8 @@ class App extends Component {
     page: 1,
     isLoading: false,
     error: null,
+    showModal: false,
+    modalImg: null,
   };
 
   async componentDidUpdate(prevProps, prevState) {
@@ -23,7 +27,9 @@ class App extends Component {
       try {
         const response = await pixabayFetch(submitValue, page);
 
-        this.setState({ cards: [...response] });
+        const res = this.normalaizeFeatch(response);
+        this.setState({ cards: [...res] });
+        window.scrollTo({ top: 0, left: 0 });
         return;
       } catch (error) {
         this.setState({ error: error.message });
@@ -31,16 +37,16 @@ class App extends Component {
         this.setState({ isLoading: false });
       }
     }
+
     if (page !== prevState.page) {
       this.setState({ isLoading: true });
+
       try {
         const response = await pixabayFetch(submitValue, page);
-
+        const res = this.normalaizeFeatch(response);
         this.setState(prevState => {
           return {
-            cards: [...prevState.cards, ...response],
-
-            isLoading: 'resolved',
+            cards: [...prevState.cards, ...res],
           };
         });
       } catch (error) {
@@ -50,6 +56,17 @@ class App extends Component {
       }
     }
   }
+
+  normalaizeFeatch = response => {
+    return response.map(res => {
+      return {
+        id: res.id,
+        webformatURL: res.webformatURL,
+        largeImageURL: res.largeImageURL,
+        tags: res.tags,
+      };
+    });
+  };
 
   handelSubmit = data => {
     this.setState({ submitValue: data, page: 1 });
@@ -67,32 +84,37 @@ class App extends Component {
     return visible;
   };
 
-  isCompleteSerch = () => {
+  togleModal = () => {
+    this.setState(prevState => ({ showModal: !prevState.showModal }));
+  };
+
+  handleModal = idImg => {
+    const { cards } = this.state;
+    const modalImg = cards.filter(card => idImg === card.id);
+    this.setState({ modalImg: modalImg });
+
+    this.togleModal();
+  };
+
+  isSuccessfulSerch = () => {
     const { cards } = this.state;
     return cards.length <= 0 ? true : false;
   };
 
-  inSearchMessage = submitValue => {
-    if (this.state.submitValue !== '') {
-      return <div>Нажаль ми нічого не знайшли за запитом {submitValue}</div>;
-    }
-    return <div>Заповніть поле пошуку</div>;
-  };
   render() {
-    const { cards, isLoading, submitValue } = this.state;
+    const { cards, isLoading, showModal, modalImg } = this.state;
     const visible = this.visibleLoadButton();
-    const isCompleteSerch = this.isCompleteSerch();
-    const searchMessage = this.inSearchMessage(submitValue);
+    const isSuccessfulSerch = this.isSuccessfulSerch();
 
     return (
-      <>
+      <AppContainer>
         <Searchbar onSubmit={this.handelSubmit} />
-        <ImageGallery cards={cards} />
-
+        <ImageGallery cards={cards} handleModal={this.handleModal} />
         {isLoading && <Loader />}
-        {visible && <Button onClick={this.onLoadMore} />}
-        {isCompleteSerch && searchMessage}
-      </>
+        {isSuccessfulSerch && <Message {...this.state} />}
+        {visible && <Button onClick={this.onLoadMore} isLoading={isLoading} />}
+        {showModal && <Modal modalImg={modalImg} onClose={this.togleModal} />}
+      </AppContainer>
     );
   }
 }
