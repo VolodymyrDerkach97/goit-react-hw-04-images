@@ -16,5 +16,5 @@ export default Button;
 
 Button.propTypes = {
   onClick: PropTypes.func.isRequired,
-  isloading: PropTypes.bool.isRequired,
+  isloading: PropTypes.bool,
 };

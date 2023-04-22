@@ -5,9 +5,11 @@ import ImageGallery from '../ImageGallery';
 import Button from '../Button';
 import Loader from '../Loader';
 import Message from '../Message';
+import Modal from '../Modal';
 
 import pixabayFetch from '../../services/pixabay-api';
-import Modal from 'components/Modal/Modal';
+const Scroll = require('react-scroll');
+const scroll = Scroll.animateScroll;
 
 class App extends Component {
   state = {
@@ -22,6 +24,7 @@ class App extends Component {
 
   async componentDidUpdate(prevProps, prevState) {
     const { submitValue, page } = this.state;
+
     if (submitValue !== prevState.submitValue) {
       this.setState({ isLoading: true, page: 1 });
       try {
@@ -53,6 +56,8 @@ class App extends Component {
         this.setState({ error: error.message });
       } finally {
         this.setState({ isLoading: false });
+        const windowInnerHeight = document.documentElement.clientHeight;
+        scroll.scrollMore(windowInnerHeight - 160);
       }
     }
   }
@@ -69,10 +74,13 @@ class App extends Component {
   };
 
   handelSubmit = data => {
+    if (this.state.submitValue === data) {
+      return;
+    }
     this.setState({ submitValue: data, page: 1 });
   };
 
-  onLoadMore = () => {
+  onLoadMore = e => {
     this.setState(prevState => {
       return { page: prevState.page + 1 };
     });
