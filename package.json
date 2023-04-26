@@ -1,8 +1,8 @@
 {
-  "name": "react-homework-template",
+  "name": "goit-react-hw-04-images",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://VolodymyrDerkach97.github.io/goit-react-hw-03-image-finder/",
+  "homepage": "https://VolodymyrDerkach97.github.io/goit-react-hw-04-images/",
   "dependencies": {
     "@emotion/styled": "^11.10.6",
     "@testing-library/jest-dom": "^5.16.3",

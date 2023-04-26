@@ -1,129 +1,107 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { AppContainer } from './App.styled';
 import Searchbar from '../Searchbar';
 import ImageGallery from '../ImageGallery';
 import Button from '../Button';
 import Loader from '../Loader';
 import Message from '../Message';
-import Modal from '../Modal';
 
 import pixabayFetch from '../../services/pixabay-api';
 const Scroll = require('react-scroll');
 const scroll = Scroll.animateScroll;
 
-class App extends Component {
-  state = {
-    cards: [],
-    submitValue: '',
-    page: 1,
-    isLoading: false,
-    error: null,
-    showModal: false,
-    modalImg: null,
-  };
+const amountOfImgPerPage = 12;
 
-  async componentDidUpdate(prevProps, prevState) {
-    const { submitValue, page } = this.state;
+const INITIAL_VALUE = {
+  cards: [],
+  submitValue: '',
+  page: null,
+  isLoading: false,
+  error: null,
+  visibleLoadButton: false,
+};
 
-    if (submitValue !== prevState.submitValue) {
-      this.setState({ isLoading: true, page: 1 });
-      try {
-        const response = await pixabayFetch(submitValue, page);
+const App = () => {
+  const [cards, setCards] = useState(INITIAL_VALUE.cards);
+  const [submitValue, setSubmitValue] = useState(INITIAL_VALUE.submitValue);
+  const [page, setPage] = useState(INITIAL_VALUE.page);
+  const [isLoading, setIsLoading] = useState(INITIAL_VALUE.isLoading);
+  const [error, setError] = useState(INITIAL_VALUE.error);
+  const [visibleLoadButton, setVisibleLoadButton] = useState(
+    INITIAL_VALUE.visibleLoadButton
+  );
 
-        const res = this.normalaizeFeatch(response);
-        this.setState({ cards: [...res] });
-        window.scrollTo({ top: 0, left: 0 });
-        return;
-      } catch (error) {
-        this.setState({ error: error.message });
-      } finally {
-        this.setState({ isLoading: false });
-      }
-    }
-
-    if (page !== prevState.page) {
-      this.setState({ isLoading: true });
-
-      try {
-        const response = await pixabayFetch(submitValue, page);
-        const res = this.normalaizeFeatch(response);
-        this.setState(prevState => {
-          return {
-            cards: [...prevState.cards, ...res],
-          };
-        });
-      } catch (error) {
-        this.setState({ error: error.message });
-      } finally {
-        this.setState({ isLoading: false });
-        const windowInnerHeight = document.documentElement.clientHeight;
-        scroll.scrollMore(windowInnerHeight - 160);
-      }
-    }
-  }
-
-  normalaizeFeatch = response => {
-    return response.map(res => {
-      return {
-        id: res.id,
-        webformatURL: res.webformatURL,
-        largeImageURL: res.largeImageURL,
-        tags: res.tags,
-      };
-    });
-  };
-
-  handelSubmit = data => {
-    if (this.state.submitValue === data) {
+  useEffect(() => {
+    if (submitValue === INITIAL_VALUE.submitValue) {
       return;
     }
-    this.setState({ submitValue: data, page: 1 });
+    setIsLoading(true);
+    setVisibleLoadButton(false);
+    const normalaizeFeatch = response => {
+      return response.hits.map(res => {
+        return {
+          id: res.id,
+          webformatURL: res.webformatURL,
+          largeImageURL: res.largeImageURL,
+          tags: res.tags,
+        };
+      });
+    };
+
+    const featchImage = async () => {
+      try {
+        const response = await pixabayFetch(submitValue, page);
+        const res = normalaizeFeatch(response);
+        setCards(prev => [...prev, ...res]);
+
+        const lastPage = response.total / amountOfImgPerPage;
+
+        lastPage >= page
+          ? setVisibleLoadButton(true)
+          : setVisibleLoadButton(false);
+
+        if (page >= 2) {
+          const windowInnerHeight = document.documentElement.clientHeight;
+          scroll.scrollMore(windowInnerHeight - 160);
+        }
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    featchImage();
+  }, [page, submitValue]);
+
+  const handelSubmit = data => {
+    if (submitValue === data) {
+      return;
+    }
+    setSubmitValue(data);
+    setPage(1);
+    setCards([]);
   };
 
-  onLoadMore = e => {
-    this.setState(prevState => {
-      return { page: prevState.page + 1 };
-    });
-  };
+  const onLoadMore = e => setPage(prev => prev + 1);
 
-  visibleLoadButton = () => {
-    const { cards } = this.state;
-    const visible = cards.length < 12 ? false : true;
-    return visible;
-  };
+  const isSuccessfulSerch = cards.length <= 0 ? true : false;
+  return (
+    <AppContainer>
+      <Searchbar onSubmit={handelSubmit} />
+      <ImageGallery cards={cards} />
+      {isLoading && <Loader />}
+      {isSuccessfulSerch && (
+        <Message
+          submitValue={submitValue}
+          isLoading={isLoading}
+          error={error}
+        />
+      )}
+      {visibleLoadButton && (
+        <Button onClick={onLoadMore} isLoading={isLoading} />
+      )}
+    </AppContainer>
+  );
+};
 
-  togleModal = () => {
-    this.setState(prevState => ({ showModal: !prevState.showModal }));
-  };
-
-  handleModal = idImg => {
-    const { cards } = this.state;
-    const modalImg = cards.filter(card => idImg === card.id);
-    this.setState({ modalImg: modalImg });
-
-    this.togleModal();
-  };
-
-  isSuccessfulSerch = () => {
-    const { cards } = this.state;
-    return cards.length <= 0 ? true : false;
-  };
-
-  render() {
-    const { cards, isLoading, showModal, modalImg } = this.state;
-    const visible = this.visibleLoadButton();
-    const isSuccessfulSerch = this.isSuccessfulSerch();
-
-    return (
-      <AppContainer>
-        <Searchbar onSubmit={this.handelSubmit} />
-        <ImageGallery cards={cards} handleModal={this.handleModal} />
-        {isLoading && <Loader />}
-        {isSuccessfulSerch && <Message {...this.state} />}
-        {visible && <Button onClick={this.onLoadMore} isLoading={isLoading} />}
-        {showModal && <Modal modalImg={modalImg} onClose={this.togleModal} />}
-      </AppContainer>
-    );
-  }
-}
 export default App;
